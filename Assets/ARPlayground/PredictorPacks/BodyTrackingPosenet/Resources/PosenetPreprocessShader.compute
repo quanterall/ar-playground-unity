@@ -1,0 +1,23 @@
+#pragma kernel PreprocessResNet
+#pragma kernel PreprocessMobileNet
+
+// input image
+Texture2D<half4> InputImage;
+// processed image
+RWTexture2D<half4> Result;
+
+[numthreads(8, 8, 1)]
+void PreprocessMobileNet(uint3 id : SV_DispatchThreadID)
+{
+    // normalize the color values to the range [-1,1] -> 2 * (value - min) / (max - min) - 1
+    Result[id.xy] = half4(2.0h * InputImage[id.xy].r / 1.0h - 1.0h, 2.0h * InputImage[id.xy].g / 1.0h - 1.0h,
+        2.0h * InputImage[id.xy].b / 1.0h - 1.0h, InputImage[id.xy].a);
+}
+
+[numthreads(8, 8, 1)]
+void PreprocessResNet(uint3 id : SV_DispatchThreadID)
+{
+    // scale each color value to the range [0,255] and add the ImageNet mean value
+    Result[id.xy] = half4(InputImage[id.xy].r * 255.0h - 123.15h, InputImage[id.xy].g * 255.0h - 115.90h,
+        InputImage[id.xy].b * 255.0h - 103.06h, InputImage[id.xy].a);
+}

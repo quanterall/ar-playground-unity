@@ -1,0 +1,38 @@
+// First stage postprocessing (detection data aggregation)
+
+#pragma kernel Postprocess1
+
+#include "UltraCommon.hlsl"
+
+// Input
+Texture2D<float2> Scores;
+Texture2D<float4> Boxes;
+uint2 InputSize;
+float Threshold;
+
+// Output
+RWStructuredBuffer<Detection> Output;
+RWStructuredBuffer<uint> OutputCount; // Only used as a counter
+
+[numthreads(16, 4, 1)]
+void Postprocess1(uint2 id : SV_DispatchThreadID)
+{
+    if (!all(id < InputSize)) return;
+
+    float score = Scores[uint2(id.x, id.y)].y;
+    float4 box = Boxes[uint2(id.x, id.y)];
+
+    if (score < Threshold) return;
+
+    Detection data;
+
+    data.x1 = box.x;
+    data.y1 = box.y;
+    data.x2 = box.z;
+    data.y2 = box.w;
+    data.score = score;
+    data.pad = 0;
+
+    uint count = OutputCount.IncrementCounter();
+    if (count < MAX_DETECTION) Output[count] = data;
+}

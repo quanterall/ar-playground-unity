@@ -1,0 +1,11 @@
+/.vs/
+/Builds/
+/Library/
+/Logs/
+/obj/
+/Temp/
+/.vsconfig
+*.sln
+*.csproj
+*.csv
+/heatmaps.txt
