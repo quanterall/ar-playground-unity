@@ -121,9 +121,9 @@ namespace com.quanterall.arplayground
             // update the camera image
             bool bUpdateCamImage = !syncImageWithResults || bAnyPredReady;
 
-            if (cameraImage && bUpdateCamImage)
+            Texture srcTexture = cameraInput.Texture;
+            if (cameraImage && srcTexture && bUpdateCamImage)
             {
-                Texture srcTexture = cameraInput.Texture;
                 if (_texture == null || _texture.width != srcTexture.width || _texture.height != srcTexture.height)
                 {
                     if (_texture != null)

@@ -75,15 +75,6 @@ namespace com.quanterall.arplayground
 
         void Start()
         {
-            //if (cameraImage)
-            //{
-            //    _camImageAspect = cameraImage.gameObject.GetComponent<AspectRatioFitter>();
-            //    if(_camImageAspect == null)
-            //    {
-            //        _camImageAspect = cameraImage.gameObject.GetComponentInParent<AspectRatioFitter>();
-            //    }
-            //}
-
             if(_textureMat == null)
             {
                 _textureMat = new Material(Shader.Find("Custom/ResizeTexShader"));
@@ -92,17 +83,6 @@ namespace com.quanterall.arplayground
             if (externalTexture)
             {
                 _texture = new RenderTexture(externalTexture.width, externalTexture.height, 0);
-
-                //if (cameraImage)
-                //{
-                //    cameraImage.texture = _texture;
-
-                //    if(_camImageAspect)
-                //    {
-                //        _camImageAspect.aspectRatio = (float)_texture.width / _texture.height;
-                //    }
-                //}
-
                 return;
             }
 
@@ -124,7 +104,7 @@ namespace com.quanterall.arplayground
 
             if (string.IsNullOrEmpty(deviceName))
             {
-                string sInfoMessage = "Can't find the web camera!";
+                string sInfoMessage = "Can't find the camera! Please enable the camera access and try again.";
                 Debug.LogError(sInfoMessage);
 
                 if (infoText)
@@ -152,55 +132,6 @@ namespace com.quanterall.arplayground
             else if (_webcam && _webcam.didUpdateThisFrame)
             {
                 BlitCameraTexture();
-
-                //// check the texture size
-                ////bool reqResValid = reqResolution.x != 0 && reqResolution.y != 0;
-                ////int camWidth = reqResValid ? reqResolution.x : _webcam.width;
-                ////int camHeight = reqResValid ? reqResolution.y : _webcam.height;
-
-                //GetCameraResolution(out int camWidth, out int camHeight, out bool vflip, out bool hflip,
-                //    out float aspect1, out float aspect2, out float gap);
-                ////Debug.Log("Camera width: " + camWidth + ", height: " + camHeight + ", vflip: " + vflip + ", hflip: " + hflip);
-
-                //if (_texture == null || _texture.width != camWidth || _texture.height != camHeight)
-                //{
-                //    if (_texture)
-                //    {
-                //        _texture.Release();
-                //        Utils.Destroy(_texture);
-                //    }
-
-                //    _texture = new RenderTexture(camWidth, camHeight, 0);
-
-                //    if (cameraImage)
-                //    {
-                //        cameraImage.texture = _texture;
-                //    }
-                //}
-
-                ////var aspect1 = (float)_webcam.width / _webcam.height;
-                ////var aspect2 = reqResValid ? ((float)reqResolution.x / reqResolution.y) : aspect1;
-                ////var gap = aspect2 / aspect1;
-
-                //// check the aspect ratio
-                //if (_camImageAspect && _camImageAspect.aspectRatio != aspect2)
-                //{
-                //    _camImageAspect.aspectRatio = aspect2;
-                //}
-
-                ////var vflip = _webcam.videoVerticallyMirrored;
-
-                //var scale = new Vector2(hflip ? -gap : gap, vflip ? -1f : 1f);
-                //var offset = new Vector2(hflip ? (1f + gap) / 2f : (1f - gap) / 2f, vflip ? 1f : 0);
-
-                //// get the texture to process
-                //Graphics.Blit(_webcam, _texture, scale, offset);
-
-                //if (infoText)
-                //{
-                //    //infoText.text = string.Format("Res: {1}x{2}, HM: {3}, VM: {4} - {0}", deviceName, camWidth, camHeight, hflip, vflip);
-                //    //infoText.text = string.Format("Res: {1}x{2}, SO: {3}, VM: {4} - {0}", deviceName, Screen.width, Screen.height, Screen.orientation, vflip);
-                //}
             }
 
             _lastUpdateTime = System.DateTime.UtcNow.Ticks;
@@ -348,11 +279,6 @@ namespace com.quanterall.arplayground
                 }
 
                 _texture = new RenderTexture(tgtWidth, tgtHeight, 0, RenderTextureFormat.ARGB32);
-
-                //if (cameraImage)
-                //{
-                //    cameraImage.texture = _texture;
-                //}
             }
 
             // fix bug on Android
@@ -374,12 +300,6 @@ namespace com.quanterall.arplayground
                 transMat = GetTransformMat(camRotation, frontFacing, _webcam.videoVerticallyMirrored);
                 texST = GetTexST(camAspect, tgtAspect);
             }
-
-            //// check the aspect ratio
-            //if (_camImageAspect && _camImageAspect.aspectRatio != tgtAspect)
-            //{
-            //    _camImageAspect.aspectRatio = tgtAspect;
-            //}
 
             // blit the texture
             _textureMat.SetMatrix(_TransformMatParam, transMat);
