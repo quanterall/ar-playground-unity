@@ -9,6 +9,17 @@ namespace com.quanterall.arplayground
 {
     public static class PosenetUtils
     {
+        /// <summary>
+        /// Body-points structure.
+        /// </summary>
+        [StructLayout(LayoutKind.Sequential)]
+        public struct BodyPoints
+        {
+            public Vector2 position;
+            public float score;
+
+            public Keypoint[] keypoints;
+        }
 
         // the number of detected keypoints
         public const int KeypointCount = 17;
@@ -26,6 +37,10 @@ namespace com.quanterall.arplayground
             LeftAnkle, RightAnkle           // 15, 16
         }
 
+
+        // the size of the Keypoint-struct in bytes
+        public const int KeypointStructSize = 40;
+
         /// <summary>
         /// Keypoint structure.
         /// </summary>
@@ -38,7 +53,8 @@ namespace com.quanterall.arplayground
             public float score;
             //public uint padding;
 
-            public Vector2 posSrc, posTgt;
+            public Vector2 posSrc;
+            public Vector2 posTgt;
 
             public Keypoint(int id, float score, Vector2 position, Vector2Int posIndex)
             {
@@ -99,8 +115,31 @@ namespace com.quanterall.arplayground
             System.Tuple.Create((int)KeypointID.RightKnee, (int)KeypointID.RightAnkle)      // 15
         };
 
+
+        // creates a BodyPoints struct out of the provided keypoints
+        public static BodyPoints GetBodyPoints(Keypoint[] keypoints, float scoreThreshold = 0.5f)
+        {
+            BodyPoints bp = new BodyPoints();
+            bp.keypoints = new Keypoint[KeypointCount];
+
+            for(int k = 0; k < keypoints.Length; k++)
+            {
+                bp.keypoints[k] = keypoints[k];
+
+                if(k == 0)
+                {
+                    bp.position = keypoints[k].position;
+                    bp.score = keypoints[k].score;
+                }
+            }
+
+            return bp;
+        }
+
+
         // the size of the local window in the heatmap to look for confidence scores higher than the one at the current heatmap coordinate
         private const int kLocalMaximumRadius = 1;
+
 
         // detects multiple bodies and finds their parts from part scores and displacement vectors. 
         public static Keypoint[][] DecodeMultiplePoses(Tensor heatmaps, Tensor offsets, Tensor displacementsFwd, Tensor displacementBwd, out List<Keypoint> alAllKeypoints,
@@ -109,12 +148,6 @@ namespace com.quanterall.arplayground
             List<Keypoint[]> poses = new List<Keypoint[]>();
             float squaredNmsRadius = (float)nmsRadius * nmsRadius;
             //Debug.Log(string.Format("Heatmaps: {0}, offsets: {1}, dispFwd: {2}, dispBwd: {3}", heatmaps.shape, offsets.shape, displacementsFwd.shape, displacementBwd.shape));
-
-            //string sep = ";";
-            //SaveTensorToFile("heatmaps.csv", sep, heatmaps, true, false);
-            //SaveTensorToFile("offsets.csv", sep, offsets, false, true);
-            //SaveTensorToFile("dispfwd.csv", sep, displacementsFwd, false, true);
-            //SaveTensorToFile("dispbwd.csv", sep, displacementBwd, false, true);
 
             // get the list of keypoints
             List<Keypoint> listAllKeypoints = BuildPartList(scoreThreshold, kLocalMaximumRadius, stride, heatmaps, offsets);
@@ -149,76 +182,6 @@ namespace com.quanterall.arplayground
 
             return poses.ToArray();
         }
-
-        //// saves the tensor to a file
-        //private static void SaveTensorToFile(string fileName, string sep, Tensor tensor, bool bOnlyPositive, bool bGetStridedWH)
-        //{
-        //    System.Text.StringBuilder sbBuf = new System.Text.StringBuilder();
-
-        //    for (int y = 0; y < tensor.height; y++)
-        //    {
-        //        for (int x = 0; x < tensor.width; x++)
-        //        {
-        //            if (bOnlyPositive && !IsAnyValuePositive(tensor, x, y))
-        //            {
-        //                sbBuf.Append(" ").Append(sep);
-        //                continue;
-        //            }
-
-        //            System.Text.StringBuilder sbPart = new System.Text.StringBuilder();
-        //            sbPart.Append("( ");
-
-        //            for (int c = 0; c < tensor.channels; c++)
-        //            {
-        //                var v = tensor[0, y, x, c];
-
-        //                if (bGetStridedWH)
-        //                {
-        //                    if ((c % 2) == 0 && (c + 1) < tensor.channels)
-        //                    {
-        //                        var v1 = tensor[0, y, x, c + 1];
-        //                        int vy = Mathf.RoundToInt(v / (int)stride);
-        //                        int vx = Mathf.RoundToInt(v1 / (int)stride);
-
-        //                        sbPart.AppendFormat("{0}:({1},{2}) ", c >> 1, vy, vx);
-        //                    }
-        //                }
-        //                else
-        //                {
-        //                    if (!bOnlyPositive || v > 0f)
-        //                    {
-        //                        sbPart.AppendFormat("{0}:{1:F2} ", c, v);
-        //                    }
-        //                }
-        //            }
-
-        //            sbPart.Append(")");
-        //            sbBuf.Append(sbPart.ToString()).Append(sep);
-
-        //            sbPart.Clear();
-        //            sbPart = null;
-        //        }
-
-        //        sbBuf.AppendLine();
-        //    }
-
-        //    System.IO.File.WriteAllText(fileName, sbBuf.ToString());
-        //    sbBuf.Clear();
-        //    sbBuf = null;
-        //}
-
-        //private static bool IsAnyValuePositive(Tensor tensor, int x, int y)
-        //{
-        //    for (int c = 0; c < tensor.channels; c++)
-        //    {
-        //        if (tensor[0, y, x, c] > 0f)
-        //        {
-        //            return true;
-        //        }
-        //    }
-
-        //    return false;
-        //}
 
         // creates a list of keypoints with the highest values within the provided radius.
         private static List<Keypoint> BuildPartList(float scoreThreshold, int localMaximumRadius, int stride, Tensor heatmaps, Tensor offsets)

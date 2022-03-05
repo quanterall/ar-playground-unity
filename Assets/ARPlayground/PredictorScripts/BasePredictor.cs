@@ -9,7 +9,7 @@ namespace com.quanterall.arplayground
     {
         [Tooltip("Whether to run the predictor in background, whenever possible, or not.")]
         //[HideInInspector]
-        public bool workInBackground = false;
+        internal bool workInBackground = false;
 
         // thread and synchronization events
         private Thread predThread = null;
@@ -166,6 +166,15 @@ namespace com.quanterall.arplayground
         {
             isInferenceReady = bInferenceReady;
             //Debug.Log("InferenceReady set to " + bInferenceReady);
+        }
+
+        /// <summary>
+        /// Tries to get the last inference results in the main thread.
+        /// </summary>
+        /// <returns></returns>
+        public virtual bool TryGetResults()
+        {
+            return false;
         }
 
         /// <summary>

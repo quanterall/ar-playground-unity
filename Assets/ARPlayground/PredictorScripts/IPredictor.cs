@@ -43,6 +43,12 @@ namespace com.quanterall.arplayground
         bool IsInferenceReady();
 
         /// <summary>
+        /// Tries to get the last inference results in the main thread.
+        /// </summary>
+        /// <returns></returns>
+        bool TryGetResults();
+
+        /// <summary>
         /// Displays the inference results on screen.
         /// </summary>
         /// <param name="controller"></param>

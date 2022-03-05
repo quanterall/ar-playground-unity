@@ -186,6 +186,16 @@ namespace com.quanterall.arplayground
         }
 
         /// <summary>
+        /// Tries to get the last inference results in the main thread.
+        /// </summary>
+        /// <returns></returns>
+        public override bool TryGetResults()
+        {
+            _detections = GetDetections();
+            return true;
+        }
+
+        /// <summary>
         /// Displays the inference results on screen.
         /// </summary>
         /// <param name="controller"></param>
@@ -290,7 +300,7 @@ namespace com.quanterall.arplayground
 
             // get face-tracking results
             _cached = null;
-            _detections = GetDetections();
+            //_detections = GetDetections();
 
             // complete the inference (set ready state)
             base.CompleteInference();

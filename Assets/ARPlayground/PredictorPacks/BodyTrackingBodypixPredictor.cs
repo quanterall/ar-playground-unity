@@ -69,6 +69,7 @@ namespace com.quanterall.arplayground
         //private RenderTexture heatmapsTex;
 
         // keypoints
+        private PosenetUtils.BodyPoints[] _bodyPoints;
         private PosenetUtils.Keypoint[][] _keypoints = null;
         private object _keypointLock = new object();
         private List<PosenetUtils.Keypoint> listAllKeypoints;
@@ -117,6 +118,7 @@ namespace com.quanterall.arplayground
         {
             if(_worker == null)
             {
+                this.workInBackground = true;
                 base.InitPredictor();
 
                 // load the model
@@ -174,14 +176,39 @@ namespace com.quanterall.arplayground
         /// </summary>
         public override bool CompleteInference()
         {
-            ////GetResults();
-            ////return base.CompleteInference();
-            //return true;
-
-            if (GetResults())
+            if (GetInferenceResults())
                 return base.CompleteInference();
             else
                 return false;
+        }
+
+        /// <summary>
+        /// Tries to get the last inference results in the main thread.
+        /// </summary>
+        /// <returns></returns>
+        public override bool TryGetResults()
+        {
+            if (_keypoints == null)
+                return false;
+
+            //Debug.Log("trying to get results at: " + DateTime.Now.ToString("o"));
+            lock (_keypointLock)
+            {
+                int numElements = _keypoints.GetLength(0);
+
+                if (_bodyPoints == null || _bodyPoints.Length != numElements)
+                {
+                    _bodyPoints = new PosenetUtils.BodyPoints[numElements];
+                }
+
+                for (int i = 0; i < numElements; i++)
+                {
+                    _bodyPoints[i] = PosenetUtils.GetBodyPoints(_keypoints[i], scoreThreshold);
+                    //Debug.Log(string.Format("  body {0} - pos: {1}, score: {2}", i, _bodyPoints[i].position, _bodyPoints[i].score));
+                }
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -190,53 +217,49 @@ namespace com.quanterall.arplayground
         /// <param name="controller"></param>
         public override void DisplayInferenceResults(PlaygroundController controller)
         {
-            //if (_keypoints == null)
-            //    return;
+            if (_bodyPoints == null)
+                return;
 
-            //lock(_keypointLock)
+            //Debug.Log("    displaying inference results at: " + DateTime.Now.ToString("o"));
+            int bodyCount = _bodyPoints.Length;
+            Rect imageRect = controller.GetImageRect();  // (float)_inputWidth / _inputHeight
+
+            System.Tuple<int, int>[] displayBones = PosenetUtils.displayBones;
+            int bonesCount = displayBones.GetLength(0);
+            //Debug.Log(string.Format("BodyCount: {0}, BonesCount: {1}, ImageRect: {2}", bodyCount, bonesCount, imageRect));
+
+            for (int i = 0; i < bodyCount; i++)
+            {
+                Color clr = Utils.GetColorByIndex(i);  // Color.red; // 
+
+                for (int j = 0; j < bonesCount; j++)
+                {
+                    int k1 = displayBones[j].Item1;
+                    int k2 = displayBones[j].Item2;
+
+                    PosenetUtils.Keypoint kp1 = _bodyPoints[i].keypoints[k1];
+                    PosenetUtils.Keypoint kp2 = _bodyPoints[i].keypoints[k2];
+                    //Debug.Log(string.Format("  d-body: {0}, kp: {1}, pos1: {2}/{3:F2}, pos2: {4}/{5:F2}", i, j, kp1.position, kp1.score, kp2.position, kp2.score));
+
+                    if (kp1.score >= minConfidence && kp2.score >= minConfidence)
+                    {
+                        controller.DrawLine(kp1.position.x / _texture.width, 1f - kp1.position.y / _texture.height,
+                            kp2.position.x / _texture.width, 1f - kp2.position.y / _texture.height, 2f, clr, imageRect);
+                    }
+                }
+
+                //if(_bodyPoints[i].score >= minConfidence)
+                //    Debug.Log(string.Format("  body {0} - P0: ({1:F2}, {2:F2}), score: {3:F2}", i, _bodyPoints[i].position.x, _bodyPoints[i].position.y, _bodyPoints[i].score));
+            }
+
+            //// keypoits & displacements
+            //for (int i = 0; i < listAllKeypoints.Count; i++)
             //{
-            //    int bodyCount = _keypoints.GetLength(0);
-            //    Rect imageRect = controller.GetImageRect();  // (float)_inputWidth / _inputHeight
+            //    PosenetUtils.Keypoint kp = listAllKeypoints[i];
+            //    controller.DrawPoint(kp.position.x / _texture.width, 1f - kp.position.y / _texture.height, 7f, Color.yellow, imageRect);
 
-            //    System.Tuple<int, int>[] displayBones = PosenetUtils.displayBones;
-            //    int bonesCount = displayBones.GetLength(0);
-            //    //Debug.Log(string.Format("BodyCount: {0}, BonesCount: {1}, ImageRect: {2}", bodyCount, bonesCount, imageRect));
-
-            //    for (int i = 0; i < bodyCount; i++)
-            //    {
-            //        Color clr = Utils.GetColorByIndex(i);  // Color.red; // 
-
-            //        for (int j = 0; j < bonesCount; j++)
-            //        {
-            //            int k1 = displayBones[j].Item1;
-            //            int k2 = displayBones[j].Item2;
-
-            //            PosenetUtils.Keypoint kp1 = _keypoints[i][k1];
-            //            PosenetUtils.Keypoint kp2 = _keypoints[i][k2];
-            //            //Debug.Log(string.Format("  body: {0}, kp: {1}, pos1: {2}/{3:F2}, pos2: {4}/{5:F2}", i, j, kp1.position, kp1.score, kp2.position, kp2.score));
-
-            //            if (kp1.score >= minConfidence && kp2.score >= minConfidence)
-            //            {
-            //                controller.DrawLine(kp1.position.x / _texture.width, 1f - kp1.position.y / _texture.height,
-            //                    kp2.position.x / _texture.width, 1f - kp2.position.y / _texture.height, 2f, clr, imageRect);
-            //            }
-            //        }
-
-            //        //Keypoint kp0 = _keypoints[i][0];
-            //        //if(kp0.score >= minConfidence)
-            //        //    Debug.Log(string.Format("B{0} - P0: ({1:F2}, {2:F2}), score: {3:F2}", i, kp0.position.x, kp0.position.y, kp0.score));
-            //    }
-
-            //    //// keypoits & displacements
-            //    //for (int i = 0; i < listAllKeypoints.Count; i++)
-            //    //{
-            //    //    PosenetUtils.Keypoint kp = listAllKeypoints[i];
-            //    //    controller.DrawPoint(kp.position.x / _texture.width, 1f - kp.position.y / _texture.height, 7f, Color.yellow, imageRect);
-
-            //    //    controller.DrawLine(kp.posSrc.x / _texture.width, 1f - kp.posSrc.y / _texture.height,
-            //    //        kp.posTgt.x / _texture.width, 1f - kp.posTgt.y / _texture.height, 2f, Color.magenta, imageRect);
-            //    //}
-
+            //    controller.DrawLine(kp.posSrc.x / _texture.width, 1f - kp.posSrc.y / _texture.height,
+            //        kp.posTgt.x / _texture.width, 1f - kp.posTgt.y / _texture.height, 2f, Color.magenta, imageRect);
             //}
         }
 
@@ -375,7 +398,7 @@ namespace com.quanterall.arplayground
         }
 
         // gets the inference results
-        private bool GetResults()
+        private bool GetInferenceResults()
         {
             //Debug.Log("GetResultsRoutine started at: " + System.DateTime.Now.ToString("o"));
             if (_heatmapTensor != null && _offsetsTensor != null && _dispFwdTensor != null && _dispBwdTensor != null)
@@ -402,7 +425,7 @@ namespace com.quanterall.arplayground
             // complete the inference (set ready state)
             //base.CompleteInference();
 
-            //Debug.Log("GetResultsRoutine finished at: " + System.DateTime.Now.ToString("o"));
+            //Debug.Log("getting inference results finished at: " + System.DateTime.Now.ToString("o"));
             //yield return null;
             return false;
         }

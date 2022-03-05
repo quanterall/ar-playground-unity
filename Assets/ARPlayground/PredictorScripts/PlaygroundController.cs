@@ -317,6 +317,9 @@ namespace com.quanterall.arplayground
                 {
                     if (pred.enabled && pred.IsInferenceReady())
                     {
+                        // get the inference results
+                        pred.TryGetResults();
+
                         bAllStarted &= pred.StartInference(texture);
                         //Debug.Log("  started inference of: " + pred.GetPredictorName());
                     }
@@ -346,7 +349,8 @@ namespace com.quanterall.arplayground
                 {
                     if (pred.enabled && !pred.workInBackground && !pred.IsInferenceReady())
                     {
-                        bAllCompleted &= pred.CompleteInference();
+                        bool bPredCompleted = pred.CompleteInference();
+                        bAllCompleted &= bPredCompleted;
                         //Debug.Log("  completed inference of: " + pred.GetPredictorName());
                     }
                 }
