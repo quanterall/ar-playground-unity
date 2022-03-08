@@ -770,6 +770,7 @@ GameObject:
   - component: {fileID: 731385816}
   - component: {fileID: 731385817}
   - component: {fileID: 731385818}
+  - component: {fileID: 731385819}
   m_Layer: 0
   m_Name: BodyTracking
   m_TagString: Untagged
@@ -803,7 +804,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8ad26d0f0f6defb47a4077c9b3d64d77, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  workInBackground: 1
   model: {fileID: 5022602860645237092, guid: 989ca33c988a1264081248b86d2eaace, type: 3}
   workerType: 32768
   minConfidence: 0.7
@@ -819,11 +819,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: da385f85fc951f64483fed02362e17fd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  workInBackground: 1
   model: {fileID: 5022602860645237092, guid: d6b43209ee03ca443a083fd7303acb91, type: 3}
   workerType: 32768
   stride: 8
   minConfidence: 0.7
+  maskImage: {fileID: 1479813794}
+--- !u!114 &731385819
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 731385815}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 00d12a5d32d67394d93d9bdc7d4f8e24, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  model: {fileID: 5022602860645237092, guid: 0675c1bd9c8884e468b1fdde8385db3f, type: 3}
+  workerType: 32768
   maskImage: {fileID: 1479813794}
 --- !u!1 &1004615256
 GameObject:
@@ -1068,7 +1082,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4a7a740e7f7f22e4a89bfd4ad51d055b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  workInBackground: 0
   model: {fileID: 5022602860645237092, guid: 7d0c66e46d5380c4394382b469be6f32, type: 3}
   workerType: 32768
   threshold: 0.75
@@ -1084,7 +1097,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c0ceaa236122bf6428df68f278845da6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  workInBackground: 0
   model: {fileID: 5022602860645237092, guid: 0dfbb7872e2153f448b322ef56799fa9, type: 3}
   workerType: 32768
   threshold: 0.7
@@ -1221,7 +1233,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0.1254902}
+  m_Color: {r: 1, g: 1, b: 1, a: 0.2509804}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1

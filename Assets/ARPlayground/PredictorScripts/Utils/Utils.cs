@@ -247,6 +247,24 @@ namespace com.quanterall.arplayground
             return rt;
         }
 
+        public static RenderTexture CreateRFloatUavRT(int w, int h)
+        {
+            var rt = new RenderTexture(w, h, 0, RenderTextureFormat.RFloat);
+            rt.enableRandomWrite = true;
+            rt.Create();
+
+            return rt;
+        }
+
+        public static RenderTexture CreateR8UavRT(int w, int h)
+        {
+            var rt = new RenderTexture(w, h, 0, RenderTextureFormat.R8);
+            rt.enableRandomWrite = true;
+            rt.Create();
+
+            return rt;
+        }
+
         // return the number of channels of the given render texture
         public static int CountChannels(RenderTexture rt)
           => rt.format == RenderTextureFormat.RFloat ? 1 : rt.format == RenderTextureFormat.RGFloat ? 2 : 4;
