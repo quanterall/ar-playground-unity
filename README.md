@@ -11,6 +11,8 @@ So far the asset contains the following predictors:
 * FaceDetectionUltraPredictor - provides face detection using the Blaze-Face model. For more information about the model, please look at [UltraFace](https://github.com/Linzaer/Ultra-Light-Fast-Generic-Face-Detector-1MB).
 * BodyTrackingPosenetPredictor - provides body tracking using the Posenet model. For more information about the model, please look at [PoseNet](https://medium.com/tensorflow/real-time-human-pose-estimation-in-the-browser-with-tensorflow-js-7dd0bc881cd5).
 * BodyTrackingBodypixPredictor - provides body tracking using the BodyPix model. For more information about the model, please look at [BodyPix](https://blog.tensorflow.org/2019/11/updated-bodypix-2.html).
+* BodySegmentationSelfiePredictor - provides body segmentation using the Selfie model. For more information about the model, please look at [Selfie](https://google.github.io/mediapipe/solutions/selfie_segmentation.html).
+* ObjectDetectionYoloV4Predictor - provides object detection using the Yolo-v4 model. For more information about the model, please look at [Yolo-v4](https://arxiv.org/abs/2004.10934) and [yolov4-tiny-keras](https://github.com/bubbliiiing/yolov4-tiny-keras).
 
 We hope you'll enjoy the tool, and put it into good use.
 

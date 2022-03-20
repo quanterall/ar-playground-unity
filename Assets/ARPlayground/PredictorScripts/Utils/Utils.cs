@@ -25,6 +25,37 @@ namespace com.quanterall.arplayground
         }
 
 
+        // returns the text contained in the given resource asset, or null if not found
+        public static string GetResourceText(string resFileName)
+        {
+            TextAsset textRes = Resources.Load(resFileName, typeof(TextAsset)) as TextAsset;
+            if (textRes == null)
+            {
+                Debug.LogWarning("Resource not found: " + resFileName);
+                return null;
+            }
+
+            return textRes.text;
+        }
+
+        // returns the text contained in the given resource asset, or null if not found
+        public static string[] GetResourceStrings(string resFileName)
+        {
+            var resText = GetResourceText(resFileName);
+            if (string.IsNullOrEmpty(resText))
+                return null;
+
+            string[] resStrings = resText.Split("\n".ToCharArray());
+
+            for(int i = resStrings.Length - 1; i >= 0; i--)
+            {
+                resStrings[i] = resStrings[i].Trim();
+            }
+
+            return resStrings;
+        }
+
+
         // draws point with the given size and color
         public static void DrawPoint(int x, int y, float size, Color color)
         {
