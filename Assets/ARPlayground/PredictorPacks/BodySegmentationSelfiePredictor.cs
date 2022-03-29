@@ -145,10 +145,10 @@ namespace com.quanterall.arplayground
         /// </summary>
         /// <param name="texture"></param>
         /// <returns></returns>
-        public override bool StartInference(Texture texture)
+        public override bool StartInference(Texture texture, long cameraFrameTime)
         {
-            base.StartInference(texture);
-            RunModel(texture);
+            base.StartInference(texture, cameraFrameTime);
+            StartCoroutine(RunModelRoutine(texture));
 
             return true;
         }
@@ -167,7 +167,7 @@ namespace com.quanterall.arplayground
         /// Tries to get the last inference results in the main thread.
         /// </summary>
         /// <returns></returns>
-        public override bool TryGetResults()
+        public override bool TryGetResults(PlaygroundController controller)
         {
             return true;
         }
@@ -182,7 +182,7 @@ namespace com.quanterall.arplayground
 
 
         // runs the inference model
-        private void RunModel(Texture source)
+        private IEnumerator RunModelRoutine(Texture source)
         {
             // create or recreate the texture
             if (_texture == null || _texture.width != _inputWidth || _texture.height != _inputHeight)
@@ -216,17 +216,15 @@ namespace com.quanterall.arplayground
             }
 
             // NNworker inference
-            TensorShape inputShape = new TensorShape(1, _inputHeight, _inputWidth, 3);
-            using (var t = new Tensor(inputShape, _preprocessBuf))
-                _worker.Execute(t);
+            //TensorShape inputShape = new TensorShape(1, _inputHeight, _inputWidth, 3);
+            //using (var t = new Tensor(inputShape, _preprocessBuf))
+            //    _worker.Execute(t);
 
-            //get results in coroutine
-            StartCoroutine(GetResultsRoutine());
-        }
+            yield return _worker.ExecuteAndWaitForResult(_preprocessBuf, _inputWidth, _inputWidth);
 
-        // gets the inference results
-        private IEnumerator GetResultsRoutine()
-        {
+            ////get results in coroutine
+            //StartCoroutine(GetResultsRoutine());
+
             // NN output retrieval
             _worker.PeekOutput().ToRenderTexture(_inferenceTex);
 
@@ -240,7 +238,7 @@ namespace com.quanterall.arplayground
                 post.SetTexture(0, "_MaskOutput", _temp1Tex);
                 post.DispatchThreads(0, _inputWidth, _inputHeight, 1);
 
-                yield return null;
+                //yield return null;
 
                 // horizontal bilateral filter
                 post.SetTexture(1, "_MaskInput", _temp1Tex);
@@ -256,6 +254,39 @@ namespace com.quanterall.arplayground
             // complete the inference (set ready state)
             base.CompleteInference();
         }
+
+        //// gets the inference results
+        //private IEnumerator GetResultsRoutine()
+        //{
+        //    // NN output retrieval
+        //    _worker.PeekOutput().ToRenderTexture(_inferenceTex);
+
+        //    var post = postprocessShader;
+        //    if (post != null)
+        //    {
+        //        // erosion
+        //        post.SetInts("_Dimensions", _inputWidth, _inputHeight);
+
+        //        post.SetTexture(0, "_Inference", _inferenceTex);
+        //        post.SetTexture(0, "_MaskOutput", _temp1Tex);
+        //        post.DispatchThreads(0, _inputWidth, _inputHeight, 1);
+
+        //        yield return null;
+
+        //        // horizontal bilateral filter
+        //        post.SetTexture(1, "_MaskInput", _temp1Tex);
+        //        post.SetTexture(1, "_MaskOutput", _temp2Tex);
+        //        post.DispatchThreads(1, _inputWidth, _inputHeight, 1);
+
+        //        // vertical bilateral filter
+        //        post.SetTexture(2, "_MaskInput", _temp2Tex);
+        //        post.SetTexture(2, "_MaskOutput", _outputTex);
+        //        post.DispatchThreads(2, _inputWidth, _inputHeight, 1);
+        //    }
+
+        //    // complete the inference (set ready state)
+        //    base.CompleteInference();
+        //}
 
     }
 }

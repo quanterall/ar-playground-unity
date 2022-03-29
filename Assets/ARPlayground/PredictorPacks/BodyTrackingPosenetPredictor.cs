@@ -169,9 +169,9 @@ namespace com.quanterall.arplayground
         /// </summary>
         /// <param name="texture"></param>
         /// <returns></returns>
-        public override bool StartInference(Texture texture)
+        public override bool StartInference(Texture texture, long cameraFrameTime)
         {
-            base.StartInference(texture);
+            base.StartInference(texture, cameraFrameTime);
             //RunModel(texture);
             StartCoroutine(RunModelRoutine(texture));
 
@@ -193,7 +193,7 @@ namespace com.quanterall.arplayground
         /// Tries to get the last inference results in the main thread.
         /// </summary>
         /// <returns></returns>
-        public override bool TryGetResults()
+        public override bool TryGetResults(PlaygroundController controller)
         {
             if (_keypoints == null)
                 return false;
@@ -307,14 +307,16 @@ namespace com.quanterall.arplayground
 
             // NNworker inference
             //Debug.Log("worker execution starting at " + DateTime.Now.ToString("o"));
-            using (var t = new Tensor(_texture, channels: 3))
-            {
-                //Debug.Log("  worker execution started at "  + DateTime.Now.ToString("o"));
-                _heatmapTensor = _worker.Execute(t).PeekOutput(_predictionLayer);
-                //Debug.Log(string.Format("ExecTime - Prev: {0}, Now: {1}, Diff: {2}", timePrev, DateTime.Now.Ticks, (DateTime.Now.Ticks - timePrev)));
-            }
+            //using (var t = new Tensor(_texture, channels: 3))
+            //{
+            //    //Debug.Log("  worker execution started at "  + DateTime.Now.ToString("o"));
+            //    _heatmapTensor = _worker.Execute(t).PeekOutput(_predictionLayer);
+            //    //Debug.Log(string.Format("ExecTime - Prev: {0}, Now: {1}, Diff: {2}", timePrev, DateTime.Now.Ticks, (DateTime.Now.Ticks - timePrev)));
+            //}
 
-            yield return new WaitForCompletion(_heatmapTensor);  // null;
+            //yield return new WaitForCompletion(_heatmapTensor);  // null;
+
+            yield return _worker.ExecuteAndWaitForResult(_texture, _predictionLayer);
             //Debug.Log("  worker execution finished at: " + System.DateTime.Now.ToString("o"));
 
             // get the model output

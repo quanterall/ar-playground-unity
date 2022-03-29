@@ -147,10 +147,10 @@ namespace com.quanterall.arplayground
         /// </summary>
         /// <param name="texture"></param>
         /// <returns></returns>
-        public override bool StartInference(Texture texture)
+        public override bool StartInference(Texture texture, long cameraFrameTime)
         {
-            base.StartInference(texture);
-            RunModel(texture, threshold);
+            base.StartInference(texture, cameraFrameTime);
+            StartCoroutine(RunModelRoutine(texture, threshold));
 
             return true;
         }
@@ -169,7 +169,7 @@ namespace com.quanterall.arplayground
         /// Tries to get the last inference results in the main thread.
         /// </summary>
         /// <returns></returns>
-        public override bool TryGetResults()
+        public override bool TryGetResults(PlaygroundController controller)
         {
             _detections = GetDetections();
             return true;
@@ -207,7 +207,7 @@ namespace com.quanterall.arplayground
         }
 
 
-        private void RunModel(Texture source, float threshold)
+        private IEnumerator RunModelRoutine(Texture source, float threshold)
         {
             // create or recreate the texture
             int minSize = _size;  // source.width < source.height ? source.width : source.height;
@@ -241,16 +241,14 @@ namespace com.quanterall.arplayground
             }
 
             // Run the BlazeFace model.
-            using (var tensor = new Tensor(1, _size, _size, 3, _preBuffer))
-                _worker.Execute(tensor);
+            //using (var tensor = new Tensor(1, _size, _size, 3, _preBuffer))
+            //    _worker.Execute(tensor);
 
-            // get results in coroutine
-            StartCoroutine(GetResultsRoutine());
-        }
+            yield return _worker.ExecuteAndWaitForResult(_preBuffer, _size, _size);
 
-        // gets the inference results
-        private IEnumerator GetResultsRoutine()
-        {
+            //// get results in coroutine
+            //StartCoroutine(GetResultsRoutine());
+
             // Output tensors -> Temporary render textures
             var scores1RT = _worker.CopyOutputToTempRT("Identity", 1, 512);
             var scores2RT = _worker.CopyOutputToTempRT("Identity_1", 1, 384);
@@ -261,7 +259,7 @@ namespace com.quanterall.arplayground
 
             // 1st postprocess (bounding box aggregation)
             var post1 = postprocess1Shader;
-            if(post1 != null)
+            if (post1 != null)
             {
                 post1.SetFloat("_ImageSize", _size);
                 post1.SetFloat("_Threshold", threshold);
@@ -282,14 +280,14 @@ namespace com.quanterall.arplayground
             RenderTexture.ReleaseTemporary(boxes1RT);
             RenderTexture.ReleaseTemporary(boxes2RT);
 
-            yield return null;
+            //yield return null;
 
             // Retrieve the bounding box count.
             ComputeBuffer.CopyCount(_post1Buffer, _countBuffer, 0);
 
             // 2nd postprocess (overlap removal)
             var post2 = postprocess2Shader;
-            if(post2 != null)
+            if (post2 != null)
             {
                 post2.SetBuffer(0, "_Input", _post1Buffer);
                 post2.SetBuffer(0, "_Count", _countBuffer);
@@ -307,6 +305,66 @@ namespace com.quanterall.arplayground
             // complete the inference (set ready state)
             base.CompleteInference();
         }
+
+        //// gets the inference results
+        //private IEnumerator GetResultsRoutine()
+        //{
+        //    // Output tensors -> Temporary render textures
+        //    var scores1RT = _worker.CopyOutputToTempRT("Identity", 1, 512);
+        //    var scores2RT = _worker.CopyOutputToTempRT("Identity_1", 1, 384);
+        //    var boxes1RT = _worker.CopyOutputToTempRT("Identity_2", 16, 512);
+        //    var boxes2RT = _worker.CopyOutputToTempRT("Identity_3", 16, 384);
+
+        //    //yield return null;
+
+        //    // 1st postprocess (bounding box aggregation)
+        //    var post1 = postprocess1Shader;
+        //    if(post1 != null)
+        //    {
+        //        post1.SetFloat("_ImageSize", _size);
+        //        post1.SetFloat("_Threshold", threshold);
+        //        post1.SetTexture(0, "_Scores", scores1RT);
+        //        post1.SetTexture(0, "_Boxes", boxes1RT);
+        //        post1.SetBuffer(0, "_Output", _post1Buffer);
+        //        post1.Dispatch(0, 1, 1, 1);
+
+        //        post1.SetTexture(1, "_Scores", scores2RT);
+        //        post1.SetTexture(1, "_Boxes", boxes2RT);
+        //        post1.SetBuffer(1, "_Output", _post1Buffer);
+        //        post1.Dispatch(1, 1, 1, 1);
+        //    }
+
+        //    // Release the temporary render textures.
+        //    RenderTexture.ReleaseTemporary(scores1RT);
+        //    RenderTexture.ReleaseTemporary(scores2RT);
+        //    RenderTexture.ReleaseTemporary(boxes1RT);
+        //    RenderTexture.ReleaseTemporary(boxes2RT);
+
+        //    yield return null;
+
+        //    // Retrieve the bounding box count.
+        //    ComputeBuffer.CopyCount(_post1Buffer, _countBuffer, 0);
+
+        //    // 2nd postprocess (overlap removal)
+        //    var post2 = postprocess2Shader;
+        //    if(post2 != null)
+        //    {
+        //        post2.SetBuffer(0, "_Input", _post1Buffer);
+        //        post2.SetBuffer(0, "_Count", _countBuffer);
+        //        post2.SetBuffer(0, "_Output", _post2Buffer);
+        //        post2.Dispatch(0, 1, 1, 1);
+        //    }
+
+        //    // Retrieve the bounding box count after removal.
+        //    ComputeBuffer.CopyCount(_post2Buffer, _countBuffer, 0);
+
+        //    // get the face detections
+        //    _post2ReadCache = null;
+        //    //_detections = GetDetections();
+
+        //    // complete the inference (set ready state)
+        //    base.CompleteInference();
+        //}
 
 
         // detections read cache

@@ -64,9 +64,9 @@ namespace com.quanterall.arplayground
         private int _outputHeight = 0;
 
         // buffers and textures
-        private ComputeBuffer preprocessBuf;
-        private RenderTexture segmentTex;
-        //private RenderTexture heatmapsTex;
+        private ComputeBuffer _preprocessBuf;
+        private RenderTexture _segmentTex;
+        //private RenderTexture _heatmapsTex;
 
         // keypoints
         private PosenetUtils.BodyPoints[] _bodyPoints;
@@ -162,9 +162,9 @@ namespace com.quanterall.arplayground
         /// </summary>
         /// <param name="texture"></param>
         /// <returns></returns>
-        public override bool StartInference(Texture texture)
+        public override bool StartInference(Texture texture, long cameraFrameTime)
         {
-            base.StartInference(texture);
+            base.StartInference(texture, cameraFrameTime);
             //RunModel(texture);  
             StartCoroutine(RunModelRoutine(texture));
 
@@ -186,7 +186,7 @@ namespace com.quanterall.arplayground
         /// Tries to get the last inference results in the main thread.
         /// </summary>
         /// <returns></returns>
-        public override bool TryGetResults()
+        public override bool TryGetResults(PlaygroundController controller)
         {
             if (_keypoints == null)
                 return false;
@@ -269,10 +269,10 @@ namespace com.quanterall.arplayground
         {
             // allocate buffers
             int inputFootprint = _inputWidth * _inputHeight * 3;
-            preprocessBuf = new ComputeBuffer(inputFootprint, sizeof(float));
+            _preprocessBuf = new ComputeBuffer(inputFootprint, sizeof(float));
 
-            segmentTex = Utils.CreateFloat1RT(_outputWidth, _outputHeight);
-            //heatmapsTex = Utils.CreateFloat1RT(_outputWidth * PosenetUtils.KeypointCount, _outputHeight);
+            _segmentTex = Utils.CreateFloat1RT(_outputWidth, _outputHeight);
+            //_heatmapsTex = Utils.CreateFloat1RT(_outputWidth * PosenetUtils.KeypointCount, _outputHeight);
         }
 
         // frees the allocated buffers and render textures
@@ -284,14 +284,14 @@ namespace com.quanterall.arplayground
             _texture = null;
 
             // dispose buffers
-            preprocessBuf?.Dispose();
-            preprocessBuf = null;
+            _preprocessBuf?.Dispose();
+            _preprocessBuf = null;
 
-            Utils.Destroy(segmentTex);
-            segmentTex = null;
+            Utils.Destroy(_segmentTex);
+            _segmentTex = null;
 
-            //Utils.Destroy(heatmapsTex);
-            //heatmapsTex = null;
+            //Utils.Destroy(_heatmapsTex);
+            //_heatmapsTex = null;
         }
 
         // preprocess coefficients
@@ -346,7 +346,7 @@ namespace com.quanterall.arplayground
             if(pre != null)
             {
                 pre.SetTexture(0, "Input", _texture);
-                pre.SetBuffer(0, "Output", preprocessBuf);
+                pre.SetBuffer(0, "Output", _preprocessBuf);
                 pre.SetInts("InputSize", _inputWidth, _inputHeight);
                 pre.SetVector("ColorCoeffs", PreprocessCoeffsMobileNetV1);
                 pre.SetBool("InputIsLinear", QualitySettings.activeColorSpace == ColorSpace.Linear);
@@ -357,29 +357,31 @@ namespace com.quanterall.arplayground
             //yield return null;
 
             // NNworker inference
-            TensorShape inputShape = new TensorShape(1, _inputHeight, _inputWidth, 3);
-            using (var t = new Tensor(inputShape, preprocessBuf))
-            {
-                //Debug.Log("    worker execution started at " + System.DateTime.Now.ToString("o"));
-                _heatmapTensor = _worker.Execute(t).PeekOutput("heatmaps");
-            }
+            //TensorShape inputShape = new TensorShape(1, _inputHeight, _inputWidth, 3);
+            //using (var t = new Tensor(inputShape, _preprocessBuf))
+            //{
+            //    //Debug.Log("    worker execution started at " + System.DateTime.Now.ToString("o"));
+            //    _heatmapTensor = _worker.Execute(t).PeekOutput("heatmaps");
+            //}
 
-            // wait for completion
-            yield return new WaitForCompletion(_worker.PeekOutput("heatmaps"));
+            //// wait for completion
+            //yield return new WaitForCompletion(_worker.PeekOutput("heatmaps"));
+
+            yield return _worker.ExecuteAndWaitForResult(_preprocessBuf, _inputWidth, _inputHeight, "segments");
             //Debug.Log("  worker execution finished at: " + System.DateTime.Now.ToString("o"));
 
             // get results in coroutine
             //StartCoroutine(GetResultsRoutine());
 
             // NN output retrieval
-            _worker.CopyOutput("segments", segmentTex);
-            //_worker.CopyOutput("heatmaps", heatmapsTex);
+            _worker.CopyOutput("segments", _segmentTex);
+            //_worker.CopyOutput("heatmaps", _heatmapsTex);
             //Debug.Log("  copy output textures finished at: " + System.DateTime.Now.ToString("o"));
 
             // update the mask image, if needed
             if (bImageSizeChanged && maskImage != null)
             {
-                Texture targetTex = segmentTex;  // segmentTex  // heatmapsTex
+                Texture targetTex = _segmentTex;  // _segmentTex  // _heatmapsTex
                 maskImage.texture = targetTex;
             }
 

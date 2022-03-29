@@ -16,6 +16,9 @@ namespace com.quanterall.arplayground
         [Tooltip("Whether to sync the camera image with the predictors' inference results or not.")]
         public bool syncImageWithResults = true;
 
+        [Tooltip("Whether to display the results on screen or not.")]
+        public bool displayResults = true;
+
         [Tooltip("UI text to display information messages.")]
         public Text infoText;
 
@@ -46,6 +49,26 @@ namespace com.quanterall.arplayground
         // fps estimation
         private float _lastUpdateTime = 0f;
         private float _fpsEstimation = 0f;
+
+
+        /// <summary>
+        /// Gets predictor of the specified type. Returns null, if predictor cannot be found.
+        /// </summary>
+        /// <typeparam name="T">Predictor type</typeparam>
+        /// <returns>Predictor instance, or null if not found</returns>
+        public T GetPredictor<T>()
+            where T : BasePredictor
+        {
+            foreach(var pred in _predInterfaces)
+            {
+                if(pred is T)
+                {
+                    return (T)pred;
+                }
+            }
+
+            return null;
+        }
 
 
         void Awake()
@@ -112,7 +135,7 @@ namespace com.quanterall.arplayground
             {
                 // do predictor inferences
                 _lastCameraFrameTime = curCameraFrameTime;
-                StartPredictorInferences(cameraInput.Texture);
+                StartPredictorInferences(cameraInput.Texture, curCameraFrameTime);
             }
 
             // complete the inferences, if needed
@@ -150,7 +173,20 @@ namespace com.quanterall.arplayground
         void OnRenderObject()
         {
             // display current results
-            DisplayAllResults();
+            if(displayResults)
+            {
+                DisplayAllResults();
+            }
+        }
+
+
+        void OnGUI()
+        {
+            // display GUI (labels, etc.) related to the current results
+            if(displayResults)
+            {
+                DisplayAllResultsGUI();
+            }
         }
 
 
@@ -305,7 +341,7 @@ namespace com.quanterall.arplayground
         }
 
         // starts inferences of predictors that are in ready state
-        private bool StartPredictorInferences(Texture texture)
+        private bool StartPredictorInferences(Texture texture, long cameraFrameTime)
         {
             if (!texture)
                 return false;
@@ -318,9 +354,9 @@ namespace com.quanterall.arplayground
                     if (pred.enabled && pred.IsInferenceReady())
                     {
                         // get the inference results
-                        pred.TryGetResults();
+                        pred.TryGetResults(this);
 
-                        bAllStarted &= pred.StartInference(texture);
+                        bAllStarted &= pred.StartInference(texture, cameraFrameTime);
                         //Debug.Log("  started inference of: " + pred.GetPredictorName());
                     }
                 }
@@ -379,6 +415,25 @@ namespace com.quanterall.arplayground
                     if (pred.enabled)
                     {
                         pred.DisplayInferenceResults(this);
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    Debug.LogError(ex);
+                }
+            }
+        }
+
+        // displays all predictors' results-related GUI (labels, etc.)
+        private void DisplayAllResultsGUI()
+        {
+            foreach (var pred in _predInterfaces)
+            {
+                try
+                {
+                    if (pred.enabled)
+                    {
+                        pred.DisplayResultsGUI(this);
                     }
                 }
                 catch (System.Exception ex)

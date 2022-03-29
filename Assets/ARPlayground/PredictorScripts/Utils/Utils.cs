@@ -316,22 +316,46 @@ namespace com.quanterall.arplayground
     // IWorker extension methods
     static class IWorkerExtensions
     {
-        public static IEnumerator ExecuteInTime(this IWorker worker, long timeThresholdTicks = 333333)  // 10 000 000 ticks per second
+        // Executes the worker with input tensor constructed from the compute buffer, and waits for the output tensor
+        public static IEnumerator ExecuteAndWaitForResult(this IWorker worker, ComputeBuffer inputBuffer, int inputWidth, int inputHeight, string outputName = null)
         {
-            var workerEnum = worker.StartManualSchedule();
-            long timePrev = System.DateTime.Now.Ticks;
+            TensorShape inputShape = new TensorShape(1, inputHeight, inputWidth, 3);
+            Tensor outputTensor = null;
 
-            while (workerEnum.MoveNext())
-            {
-                long timeNow = System.DateTime.Now.Ticks;
+            using (var t = new Tensor(inputShape, inputBuffer))
+                outputTensor = !string.IsNullOrEmpty(outputName) ? worker.Execute(t).PeekOutput(outputName) : worker.Execute(t).PeekOutput();
 
-                if((timeNow - timePrev) >= timeThresholdTicks)
-                {
-                    timePrev = timeNow;
-                    yield return null;
-                }
-            }
+            yield return new WaitForCompletion(outputTensor);
         }
+
+        // Executes the worker with input tensor constructed from the render texture, and waits for the output tensor
+        public static IEnumerator ExecuteAndWaitForResult(this IWorker worker, RenderTexture inputTexture, string outputName = null)
+        {
+            Tensor outputTensor = null;
+
+            using (var t = new Tensor(inputTexture, channels: 3))
+                outputTensor = !string.IsNullOrEmpty(outputName) ? worker.Execute(t).PeekOutput(outputName) : worker.Execute(t).PeekOutput();
+
+            yield return new WaitForCompletion(outputTensor);
+        }
+
+        //// Executes the worker manually in slices of time
+        //public static IEnumerator ExecuteInTime(this IWorker worker, long timeThresholdTicks = 333333)  // 10 000 000 ticks per second
+        //{
+        //    var workerEnum = worker.StartManualSchedule();
+        //    long timePrev = System.DateTime.Now.Ticks;
+
+        //    while (workerEnum.MoveNext())
+        //    {
+        //        long timeNow = System.DateTime.Now.Ticks;
+
+        //        if((timeNow - timePrev) >= timeThresholdTicks)
+        //        {
+        //            timePrev = timeNow;
+        //            yield return null;
+        //        }
+        //    }
+        //}
 
         // Gets an output tensor from the worker and returns it as a temporary render texture.
         // The caller must release it using RenderTexture.ReleaseTemporary.

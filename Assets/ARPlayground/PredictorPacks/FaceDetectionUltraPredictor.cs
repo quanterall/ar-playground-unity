@@ -167,10 +167,10 @@ namespace com.quanterall.arplayground
         /// </summary>
         /// <param name="texture"></param>
         /// <returns></returns>
-        public override bool StartInference(Texture texture)
+        public override bool StartInference(Texture texture, long cameraFrameTime)
         {
-            base.StartInference(texture);
-            RunModel(texture, threshold);
+            base.StartInference(texture, cameraFrameTime);
+            StartCoroutine(RunModelRoutine(texture, threshold));
 
             return true;
         }
@@ -189,7 +189,7 @@ namespace com.quanterall.arplayground
         /// Tries to get the last inference results in the main thread.
         /// </summary>
         /// <returns></returns>
-        public override bool TryGetResults()
+        public override bool TryGetResults(PlaygroundController controller)
         {
             _detections = GetDetections();
             return true;
@@ -218,7 +218,7 @@ namespace com.quanterall.arplayground
 
 
         // runs the inference model
-        private void RunModel(Texture source, float threshold)
+        private IEnumerator RunModelRoutine(Texture source, float threshold)
         {
             // create or recreate the texture
             if (_texture == null || _texture.width != _inputWidth || _texture.height != _inputHeight)
@@ -246,17 +246,15 @@ namespace com.quanterall.arplayground
             }
 
             // NNworker inference
-            TensorShape inputShape = new TensorShape(1, _inputHeight, _inputWidth, 3);
-            using (var t = new Tensor(inputShape, _buffers.preBuf))
-                _worker.Execute(t);
+            //TensorShape inputShape = new TensorShape(1, _inputHeight, _inputWidth, 3);
+            //using (var t = new Tensor(inputShape, _buffers.preBuf))
+            //    _worker.Execute(t);
 
-            // get results in coroutine
-            StartCoroutine(GetResultsRoutine());
-        }
+            yield return _worker.ExecuteAndWaitForResult(_buffers.preBuf, _inputWidth, _inputHeight);
 
-        // gets the inference results
-        private IEnumerator GetResultsRoutine()
-        {
+            //// get results in coroutine
+            //StartCoroutine(GetResultsRoutine());
+
             // NN output retrieval
             _worker.CopyOutput("scores", _buffers.scores);
             _worker.CopyOutput("boxes", _buffers.boxes);
@@ -280,7 +278,7 @@ namespace com.quanterall.arplayground
                 post1.DispatchThreadPerPixel(0, _buffers.boxes);
             }
 
-            yield return null;
+            //yield return null;
 
             // Second stage postprocessing (overlap removal)
             var post2 = postprocess2Shader;
@@ -296,7 +294,7 @@ namespace com.quanterall.arplayground
                 ComputeBuffer.CopyCount(_buffers.post2Buf, _buffers.countReadBuf, 0);
             }
 
-            yield return null;
+            //yield return null;
 
             // get face-tracking results
             _cached = null;
@@ -305,6 +303,58 @@ namespace com.quanterall.arplayground
             // complete the inference (set ready state)
             base.CompleteInference();
         }
+
+        //// gets the inference results
+        //private IEnumerator GetResultsRoutine()
+        //{
+        //    // NN output retrieval
+        //    _worker.CopyOutput("scores", _buffers.scores);
+        //    _worker.CopyOutput("boxes", _buffers.boxes);
+
+        //    // Counter buffer reset
+        //    _buffers.post2Buf.SetCounterValue(0);
+        //    _buffers.counterBuf.SetCounterValue(0);
+
+        //    //yield return null;
+
+        //    // First stage postprocessing (detection data aggregation)
+        //    var post1 = postprocess1Shader;
+        //    if (post1 != null)
+        //    {
+        //        post1.SetTexture(0, "Scores", _buffers.scores);
+        //        post1.SetTexture(0, "Boxes", _buffers.boxes);
+        //        post1.SetDimensions("InputSize", _buffers.boxes);
+        //        post1.SetFloat("Threshold", threshold);
+        //        post1.SetBuffer(0, "Output", _buffers.post1Buf);
+        //        post1.SetBuffer(0, "OutputCount", _buffers.counterBuf);
+        //        post1.DispatchThreadPerPixel(0, _buffers.boxes);
+        //    }
+
+        //    yield return null;
+
+        //    // Second stage postprocessing (overlap removal)
+        //    var post2 = postprocess2Shader;
+        //    if (post2)
+        //    {
+        //        post2.SetFloat("Threshold", 0.5f);
+        //        post2.SetBuffer(0, "Input", _buffers.post1Buf);
+        //        post2.SetBuffer(0, "InputCount", _buffers.counterBuf);
+        //        post2.SetBuffer(0, "Output", _buffers.post2Buf);
+        //        post2.Dispatch(0, 1, 1, 1);
+
+        //        // Detection count after removal
+        //        ComputeBuffer.CopyCount(_buffers.post2Buf, _buffers.countReadBuf, 0);
+        //    }
+
+        //    yield return null;
+
+        //    // get face-tracking results
+        //    _cached = null;
+        //    //_detections = GetDetections();
+
+        //    // complete the inference (set ready state)
+        //    base.CompleteInference();
+        //}
 
 
         // detections read cache

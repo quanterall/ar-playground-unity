@@ -27,8 +27,9 @@ namespace com.quanterall.arplayground
         /// Starts predictor's inference on the given image.
         /// </summary>
         /// <param name="texture"></param>
+        /// <param name="cameraFrameTime"></param>
         /// <returns></returns>
-        bool StartInference(Texture texture);
+        bool StartInference(Texture texture, long cameraFrameTime);
 
         /// <summary>
         /// Completes the last started inference.
@@ -45,13 +46,20 @@ namespace com.quanterall.arplayground
         /// <summary>
         /// Tries to get the last inference results in the main thread.
         /// </summary>
+        /// <param name="controller"></param>
         /// <returns></returns>
-        bool TryGetResults();
+        bool TryGetResults(PlaygroundController controller);
 
         /// <summary>
         /// Displays the inference results on screen.
         /// </summary>
         /// <param name="controller"></param>
         void DisplayInferenceResults(PlaygroundController controller);
+
+        /// <summary>
+        /// Displays the results-related GUI (labels, etc.) on screen.
+        /// </summary>
+        /// <param name="controller"></param>
+        void DisplayResultsGUI(PlaygroundController controller);
     }
 }

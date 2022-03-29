@@ -18,6 +18,7 @@ namespace com.quanterall.arplayground
 
         private bool predThreadStopping = false;
         protected bool isInferenceReady = true;  // to allow the first inference
+        protected long inferenceFrameTime = 0;  // camera frame time, when the inference has started
 
 
         protected virtual void OnEnable()
@@ -119,10 +120,11 @@ namespace com.quanterall.arplayground
         /// </summary>
         /// <param name="texture"></param>
         /// <returns></returns>
-        public virtual bool StartInference(Texture texture)
+        public virtual bool StartInference(Texture texture, long cameraFrameTime)
         {
             //Debug.Log("Inference starting at: " + System.DateTime.Now.ToString("o"));
             isInferenceReady = false;
+            inferenceFrameTime = cameraFrameTime;
 
             return true;
         }
@@ -172,7 +174,7 @@ namespace com.quanterall.arplayground
         /// Tries to get the last inference results in the main thread.
         /// </summary>
         /// <returns></returns>
-        public virtual bool TryGetResults()
+        public virtual bool TryGetResults(PlaygroundController controller)
         {
             return false;
         }
@@ -182,6 +184,14 @@ namespace com.quanterall.arplayground
         /// </summary>
         /// <param name="controller"></param>
         public virtual void DisplayInferenceResults(PlaygroundController controller)
+        {
+        }
+
+        /// <summary>
+        /// Displays the results-related GUI (labels, etc.) on screen.
+        /// </summary>
+        /// <param name="controller"></param>
+        public virtual void DisplayResultsGUI(PlaygroundController controller)
         {
         }
 
