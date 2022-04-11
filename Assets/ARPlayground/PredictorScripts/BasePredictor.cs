@@ -23,12 +23,12 @@ namespace com.quanterall.arplayground
 
         protected virtual void OnEnable()
         {
-            //InitPredictor();
+            // empty
         }
 
         protected virtual void OnDisable()
         {
-            //FinishPredictor();
+            // empty
         }
 
         // dummy update method (to prevent hiding of the enabled-checkbox)

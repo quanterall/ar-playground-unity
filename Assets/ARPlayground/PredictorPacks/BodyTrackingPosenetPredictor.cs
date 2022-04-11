@@ -33,6 +33,11 @@ namespace com.quanterall.arplayground
         //[Tooltip("UI text to display information messages.")]
         //public UnityEngine.UI.Text infoText;
 
+        /// <summary>
+        /// Event, invoked when body gets detected (time, count, index, bodyPoints)
+        /// </summary>
+        public event System.Action<long, int, int, PosenetUtils.BodyPoints> OnBodyDetected;
+
 
         // compute shaders
         private ComputeShader preprocessShader;
@@ -69,7 +74,11 @@ namespace com.quanterall.arplayground
         private Tensor _offsetsTensor = null;
         private Tensor _dispFwdTensor = null;
         private Tensor _dispBwdTensor = null;
-        private int stride = 0;
+        private int _stride = 0;
+
+        //// debug objects
+        //private GameObject[] _debugObjs = new GameObject[10];
+        //private Vector2[] _debugPoints = new Vector2[10];
 
 
         /// <summary>
@@ -138,7 +147,16 @@ namespace com.quanterall.arplayground
                 // create worker
                 workerType = WorkerFactory.ValidateType(workerType);
                 _worker = WorkerFactory.CreateWorker(workerType, modelBuilder.model, false);  // nnModel
-                                                                                              //infoText.text = workerType.ToString();
+                //infoText.text = workerType.ToString();
+
+                //// debug objs
+                //for(int i = 0; i < _debugObjs.Length; i++)
+                //{
+                //    _debugObjs[i] = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                //    _debugObjs[i].transform.localScale = Vector3.one * 0.1f;
+                //    _debugObjs[i].name = "DebugBody" + i;
+                //    _debugObjs[i].transform.parent = transform;
+                //}
 
                 return true;
             }
@@ -210,8 +228,37 @@ namespace com.quanterall.arplayground
 
                 for (int i = 0; i < numElements; i++)
                 {
-                    _bodyPoints[i] = PosenetUtils.GetBodyPoints(_keypoints[i], scoreThreshold);
+                    _bodyPoints[i] = PosenetUtils.GetBodyPoints(_keypoints[i], _texture.width, _texture.height, scoreThreshold);
                     //Debug.Log(string.Format("  body {0} - pos: {1}, score: {2}", i, _bodyPoints[i].position, _bodyPoints[i].score));
+
+                    if(controller.IsDepthAvailable)
+                    {
+                        Rect imageRect = controller.GetImageRect();
+
+                        for (int k = 0; k < _bodyPoints[i].keypoints.Length; k++)
+                        {
+                            PosenetUtils.Keypoint kp = _bodyPoints[i].keypoints[k];
+                            Vector2 kpNormPos = new Vector2(kp.position.x / _texture.width, kp.position.y / _texture.height);
+                            //Debug.Log(string.Format("  body {0}, kp {1} - pos: {2}, w: {3}, h: {4}, norm: {5}", i, k, kp.position, _texture.width, _texture.height, kpNormPos));
+
+                            float depth = controller.GetDepthForPixel(kpNormPos);
+                            kp.spacePos = controller.UnprojectPoint(kpNormPos, depth);
+
+                            _bodyPoints[i].keypoints[k] = kp;
+                        }
+
+                        _bodyPoints[i].spacePos = _bodyPoints[i].keypoints[0].spacePos;
+                    }
+                }
+            }
+
+            // invoke the event
+            if (OnBodyDetected != null)
+            {
+                int count = _bodyPoints.Length, index = 0;
+                foreach (var body in _bodyPoints)
+                {
+                    OnBodyDetected(inferenceFrameTime, count, index++, body);
                 }
             }
 
@@ -267,6 +314,13 @@ namespace com.quanterall.arplayground
 
             //    controller.DrawLine(kp.posSrc.x / _texture.width, 1f - kp.posSrc.y / _texture.height,
             //        kp.posTgt.x / _texture.width, 1f - kp.posTgt.y / _texture.height, 2f, Color.magenta, imageRect);
+            //}
+
+            //// draw projection points
+            //for (int i = 0; i < _debugPoints.Length; i++)
+            //{
+            //    Color clr = Utils.GetColorByIndex(i);
+            //    controller.DrawPoint(_debugPoints[i].x, 1f - _debugPoints[i].y, 20f, clr, imageRect);
             //}
         }
 
@@ -332,8 +386,8 @@ namespace com.quanterall.arplayground
             //displacementBWD.PrepareCacheForAccess();
 
             // Calculate the stride used to scale down the inputImage
-            stride = (_texture.height - 1) / (_heatmapTensor.shape.height - 1);
-            stride -= (stride % 8);
+            _stride = (_texture.height - 1) / (_heatmapTensor.shape.height - 1);
+            _stride -= (_stride % 8);
 
             //Debug.Log("RunModel finished at: " + System.DateTime.Now.ToString("o"));
 
@@ -348,7 +402,7 @@ namespace com.quanterall.arplayground
             {
                 // determine the key points
                 //Debug.Log("decoding multiple poses started at: " + DateTime.Now.ToString("o"));
-                var keypoints = PosenetUtils.DecodeMultiplePoses(_heatmapTensor, _offsetsTensor, _dispFwdTensor, _dispBwdTensor, out listAllKeypoints, stride, maxBodies, scoreThreshold, nmsRadius);
+                var keypoints = PosenetUtils.DecodeMultiplePoses(_heatmapTensor, _offsetsTensor, _dispFwdTensor, _dispBwdTensor, out listAllKeypoints, _stride, maxBodies, scoreThreshold, nmsRadius);
                 //Debug.Log("decoding multiple poses finished at: " + DateTime.Now.ToString("o"));
 
                 lock (_keypointLock)

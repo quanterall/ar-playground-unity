@@ -17,6 +17,11 @@ namespace com.quanterall.arplayground
         [Tooltip("RawImage to display the body segmentation mask")]
         public UnityEngine.UI.RawImage maskImage;
 
+        /// <summary>
+        /// Event, invoked when the body segmentation is estimated (time, segmentationTex)
+        /// </summary>
+        public event System.Action<long, RenderTexture> OnBodySegmentation;
+
 
         // compute shaders
         private ComputeShader preprocessShader = null;
@@ -169,6 +174,9 @@ namespace com.quanterall.arplayground
         /// <returns></returns>
         public override bool TryGetResults(PlaygroundController controller)
         {
+            // invoke the event
+            OnBodySegmentation?.Invoke(inferenceFrameTime, _outputTex);
+
             return true;
         }
 

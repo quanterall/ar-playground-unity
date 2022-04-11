@@ -32,6 +32,9 @@ namespace com.quanterall.arplayground
         public GameObject predTogglePrefab;
 
 
+        // singleton instance of the PlaygroundController
+        protected static PlaygroundController _instance = null;
+
         // list of the available predictors
         private List<BasePredictor> _predInterfaces = new List<BasePredictor>();
         private Dictionary<string, BasePredictor> _dictPredictors = new Dictionary<string, BasePredictor>();
@@ -50,20 +53,39 @@ namespace com.quanterall.arplayground
         private float _lastUpdateTime = 0f;
         private float _fpsEstimation = 0f;
 
+        // camera intrinsics
+        private Vector2Int _cameraTexSize = Vector2Int.zero;
+        private Vector2 _cameraCPoint = Vector2.zero;
+        private Vector2 _cameraFLength = new Vector2(750f, 750f);
+
+        // depth estimator
+        private DepthEstimationMidasV2Predictor _depthEstimator = null;
+
+
+        /// <summary>
+        /// Gets the single PlaygroundController instance.
+        /// </summary>
+        /// <value>The PlaygroundController instance.</value>
+        public static PlaygroundController Instance => _instance;
+
+        /// <summary>
+        /// Checks whether the depth estimation is available or not.
+        /// </summary>
+        public bool IsDepthAvailable => (_depthEstimator != null && _depthEstimator.enabled);
+
 
         /// <summary>
         /// Gets predictor of the specified type. Returns null, if predictor cannot be found.
         /// </summary>
         /// <typeparam name="T">Predictor type</typeparam>
         /// <returns>Predictor instance, or null if not found</returns>
-        public T GetPredictor<T>()
-            where T : BasePredictor
+        public T GetPredictor<T>() where T : BasePredictor
         {
             foreach(var pred in _predInterfaces)
             {
-                if(pred is T)
+                if(pred is T predOfT && predOfT.enabled)
                 {
-                    return (T)pred;
+                    return predOfT;
                 }
             }
 
@@ -73,13 +95,31 @@ namespace com.quanterall.arplayground
 
         void Awake()
         {
+            // initializes the singleton instance of PlaygroundController
+            if (_instance == null)
+            {
+                _instance = this;
+                //DontDestroyOnLoad(this);
+            }
+            else if (_instance != this)
+            {
+                DestroyImmediate(gameObject);
+                return;
+            }
+
+            // init the predictors in the scene
             InitPredictors();
 
-            if(!cameraInput)
+            // get the depth estimator, if available
+            _depthEstimator = GetPredictor<DepthEstimationMidasV2Predictor>();
+
+            // get the camera-input component
+            if (!cameraInput)
             {
                 cameraInput = GetComponent<CameraInput>();
             }
 
+            // get the aspect-ratio component
             if (cameraImage)
             {
                 _camImageAspect = cameraImage.gameObject.GetComponent<AspectRatioFitter>();
@@ -133,8 +173,17 @@ namespace com.quanterall.arplayground
 
             if (_lastCameraFrameTime != curCameraFrameTime /**&& bAllPredReady*/)
             {
-                // do predictor inferences
                 _lastCameraFrameTime = curCameraFrameTime;
+
+                // check cam intrinsics
+                Texture camTexture = cameraInput.Texture;
+                if (_cameraTexSize.x != camTexture.width || _cameraTexSize.y != camTexture.height)
+                {
+                    _cameraTexSize = new Vector2Int(camTexture.width, camTexture.height);
+                    _cameraCPoint = new Vector2(camTexture.width >> 1, camTexture.height >> 1);
+                }
+
+                // start inferences
                 StartPredictorInferences(cameraInput.Texture, curCameraFrameTime);
             }
 
@@ -506,6 +555,60 @@ namespace com.quanterall.arplayground
 
             return imgRect;
         }
+
+
+        /// <summary>
+        /// Gets the depth for the given pixel, in normalized coordinates.
+        /// </summary>
+        /// <param name="normPixel">Normalized pixel coordinates.</param>
+        /// <returns>Depth, in meters.</returns>
+        public float GetDepthForPixel(Vector2 normPixel, bool isDebug = false)
+        {
+            if(_depthEstimator)
+            {
+                return _depthEstimator.GetDepthForPixel(normPixel, isDebug);
+            }
+
+            return 0f;
+        }
+
+        /// <summary>
+        /// Unprojects point from the plane to space coordinates.
+        /// </summary>
+        /// <param name="normPixel">Normalized 2d point coordinates.</param>
+        /// <param name="depth">Pixel depth, in meters.</param>
+        /// <returns>Space coordinates, in meters.</returns>
+        public Vector3 UnprojectPoint(Vector2 normPixel, float depth)
+        {
+            float x = (Mathf.Clamp01(normPixel.x) * _cameraTexSize.x - _cameraCPoint.x) / _cameraFLength.x * depth;
+            float y = ((1f - Mathf.Clamp01(normPixel.y)) * _cameraTexSize.y - _cameraCPoint.y) / _cameraFLength.y * depth;
+
+            return new Vector3(x, y, depth);
+        }
+
+        /// <summary>
+        /// Projects point from space to the plane.
+        /// </summary>
+        /// <param name="point">Space point coordinates, in meters.</param>
+        /// <param name="isNormalized">Whether the plane point should be normalized or not.</param>
+        /// <returns>2d point coordinates, normalized or fixed.</returns>
+        public Vector2 ProjectPoint(Vector3 point, bool isNormalized = true)
+        {
+            float x = point.x / point.z;
+            float y = point.y / point.z;
+
+            float px = x * _cameraFLength.x + _cameraCPoint.x;
+            float py = y * _cameraFLength.y + _cameraCPoint.y;
+
+            if(isNormalized)
+            {
+                px = Mathf.Clamp01(px / _cameraTexSize.x);
+                py = 1f - Mathf.Clamp01(py / _cameraTexSize.y);
+            }
+
+            return new Vector2(px, py);
+        }
+
 
     }
 }

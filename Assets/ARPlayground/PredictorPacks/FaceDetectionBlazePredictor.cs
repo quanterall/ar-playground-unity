@@ -17,6 +17,11 @@ namespace com.quanterall.arplayground
         [Range(0, 1)]
         public float threshold = 0.75f;
 
+        /// <summary>
+        /// Event, invoked when face gets detected (time, count, index, className, normRect, score)
+        /// </summary>
+        public event System.Action<long, int, int, Rect, float> OnFaceDetected;
+
 
         // compute shaders
         private ComputeShader preprocessShader = null;
@@ -171,7 +176,20 @@ namespace com.quanterall.arplayground
         /// <returns></returns>
         public override bool TryGetResults(PlaygroundController controller)
         {
+            // get detections
             _detections = GetDetections();
+
+            // invoke the event
+            if (OnFaceDetected != null)
+            {
+                int count = _detections.Length, index = 0;
+                foreach (Detection det in _detections)
+                {
+                    Rect rect = new Rect(det.center.x - det.extent.x / 2f, det.center.y - det.extent.y / 2f, det.extent.x, det.extent.y);
+                    OnFaceDetected(inferenceFrameTime, count, index++, rect, det.score);
+                }
+            }
+
             return true;
         }
 
@@ -183,9 +201,6 @@ namespace com.quanterall.arplayground
         {
             if (_detections == null)
                 return;
-
-            //camInput.DrawRect(0.2f, 0.1f, 0.4f, 0.3f, 2f, Color.cyan);
-            //camInput.DrawLine(0.2f, 0.4f, 0.8f, 0.6f, 2f, Color.red);
 
             for (int i = 0; i < _detections.Length; i++)
             {

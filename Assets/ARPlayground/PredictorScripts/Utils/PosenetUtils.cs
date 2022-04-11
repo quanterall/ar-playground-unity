@@ -16,7 +16,10 @@ namespace com.quanterall.arplayground
         public struct BodyPoints
         {
             public Vector2 position;
+            public Vector3 spacePos;
             public float score;
+
+            public Vector2Int imageSize;
 
             public Keypoint[] keypoints;
         }
@@ -39,7 +42,7 @@ namespace com.quanterall.arplayground
 
 
         // the size of the Keypoint-struct in bytes
-        public const int KeypointStructSize = 40;
+        public const int KeypointStructSize = 36;
 
         /// <summary>
         /// Keypoint structure.
@@ -49,22 +52,25 @@ namespace com.quanterall.arplayground
         {
             public int id;
             public Vector2 position;
+
             public Vector2Int posIndex;
             public float score;
-            //public uint padding;
+            public Vector3 spacePos;
 
-            public Vector2 posSrc;
-            public Vector2 posTgt;
+            //public Vector2 posSrc;
+            //public Vector2 posTgt;
 
             public Keypoint(int id, float score, Vector2 position, Vector2Int posIndex)
             {
                 this.id = id;
                 this.score = score;
+
                 this.position = position;
                 this.posIndex = posIndex;
+                this.spacePos = Vector3.zero;
 
-                this.posSrc = Vector2.zero;
-                this.posTgt = Vector2.zero;
+                //this.posSrc = Vector2.zero;
+                //this.posTgt = Vector2.zero;
             }
         }
 
@@ -117,10 +123,13 @@ namespace com.quanterall.arplayground
 
 
         // creates a BodyPoints struct out of the provided keypoints
-        public static BodyPoints GetBodyPoints(Keypoint[] keypoints, float scoreThreshold = 0.5f)
+        public static BodyPoints GetBodyPoints(Keypoint[] keypoints, int width, int height, float scoreThreshold = 0.5f)
         {
             BodyPoints bp = new BodyPoints();
             bp.keypoints = new Keypoint[KeypointCount];
+
+            bp.imageSize.x = width;
+            bp.imageSize.y = height;
 
             for(int k = 0; k < keypoints.Length; k++)
             {

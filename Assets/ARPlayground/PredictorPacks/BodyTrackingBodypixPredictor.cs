@@ -41,6 +41,16 @@ namespace com.quanterall.arplayground
         [Tooltip("RawImage to display the body segmentation mask")]
         public UnityEngine.UI.RawImage maskImage;
 
+        /// <summary>
+        /// Event, invoked when the body segmentation is estimated (time, segmentationTex)
+        /// </summary>
+        public event System.Action<long, RenderTexture> OnBodySegmentation;
+
+        /// <summary>
+        /// Event, invoked when body gets detected (time, count, index, bodyPoints)
+        /// </summary>
+        public event System.Action<long, int, int, PosenetUtils.BodyPoints> OnBodyDetected;
+
 
         // compute shaders
         private ComputeShader preprocessShader = null;
@@ -203,8 +213,20 @@ namespace com.quanterall.arplayground
 
                 for (int i = 0; i < numElements; i++)
                 {
-                    _bodyPoints[i] = PosenetUtils.GetBodyPoints(_keypoints[i], scoreThreshold);
+                    _bodyPoints[i] = PosenetUtils.GetBodyPoints(_keypoints[i], _texture.width, _texture.height, scoreThreshold);
                     //Debug.Log(string.Format("  body {0} - pos: {1}, score: {2}", i, _bodyPoints[i].position, _bodyPoints[i].score));
+                }
+            }
+
+            // invoke the events
+            OnBodySegmentation?.Invoke(inferenceFrameTime, _segmentTex);
+
+            if (OnBodyDetected != null)
+            {
+                int count = _bodyPoints.Length, index = 0;
+                foreach (var body in _bodyPoints)
+                {
+                    OnBodyDetected(inferenceFrameTime, count, index++, body);
                 }
             }
 

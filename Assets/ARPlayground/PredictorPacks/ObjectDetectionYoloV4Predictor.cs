@@ -19,7 +19,7 @@ namespace com.quanterall.arplayground
         public float threshold = 0.5f;
 
         /// <summary>
-        /// Event, invoked when object gets detected (className, pixelRect, score)
+        /// Event, invoked when object gets detected (time, count, index, className, normRect, score)
         /// </summary>
         public event System.Action<long, int, int, string, Rect, float> OnObjectDetected;
 
@@ -250,16 +250,16 @@ namespace com.quanterall.arplayground
         /// <returns></returns>
         public override bool TryGetResults(PlaygroundController controller)
         {
+            // get detections
             _detections = GetDetections();
 
-            Rect imageRect = controller.GetImageRect();  // (float)_inputWidth / _inputHeight
+            // invoke the event
             if (OnObjectDetected != null)
             {
                 int count = _detections.Length, index = 0;
                 foreach (Detection det in _detections)
                 {
-                    Vector3 pos = controller.GetImagePos(det.x - det.w / 2f, 1f - det.y - det.h / 2f, imageRect);
-                    Rect rect = new Rect(pos.x, pos.y, det.w * imageRect.width, det.h * imageRect.height);
+                    Rect rect = new Rect(det.x - det.w / 2f, 1f - det.y - det.h / 2f, det.w, det.h);
                     OnObjectDetected(inferenceFrameTime, count, index++, _classNames[det.classIndex], rect, det.score);
                 }
             }
@@ -336,8 +336,8 @@ namespace com.quanterall.arplayground
             }
 
             // get the texture to process
-            var scale = GetBlitScale(source, _texture);
-            var offset = GetBlitOffset(source, _texture);
+            //var scale = GetBlitScale(source, _texture);
+            //var offset = GetBlitOffset(source, _texture);
             Graphics.Blit(source, _texture);  //, scale, offset);
 
             // Preprocessing
