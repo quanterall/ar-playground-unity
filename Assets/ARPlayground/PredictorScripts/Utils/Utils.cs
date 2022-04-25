@@ -317,45 +317,58 @@ namespace com.quanterall.arplayground
     static class IWorkerExtensions
     {
         // Executes the worker with input tensor constructed from the compute buffer, and waits for the output tensor
-        public static IEnumerator ExecuteAndWaitForResult(this IWorker worker, ComputeBuffer inputBuffer, int inputWidth, int inputHeight, string outputName = null)
+        public static IEnumerator ExecuteAndWaitForResult(this IWorker worker, BasePredictor caller,
+            ComputeBuffer inputBuffer, int inputWidth, int inputHeight, string outputName = null)
         {
             TensorShape inputShape = new TensorShape(1, inputHeight, inputWidth, 3);
             Tensor outputTensor = null;
 
             using (var t = new Tensor(inputShape, inputBuffer))
-                outputTensor = !string.IsNullOrEmpty(outputName) ? worker.Execute(t).PeekOutput(outputName) : worker.Execute(t).PeekOutput();
+            {
+                //outputTensor = !string.IsNullOrEmpty(outputName) ? worker.Execute(t).PeekOutput(outputName) : worker.Execute(t).PeekOutput();
+                yield return worker.ExecuteInTime(caller, t);
+                outputTensor = !string.IsNullOrEmpty(outputName) ? worker.PeekOutput(outputName) : worker.PeekOutput();
+            }
 
             yield return new WaitForCompletion(outputTensor);
         }
 
         // Executes the worker with input tensor constructed from the render texture, and waits for the output tensor
-        public static IEnumerator ExecuteAndWaitForResult(this IWorker worker, RenderTexture inputTexture, string outputName = null)
+        public static IEnumerator ExecuteAndWaitForResult(this IWorker worker, BasePredictor caller,
+            RenderTexture inputTexture, string outputName = null)
         {
             Tensor outputTensor = null;
 
             using (var t = new Tensor(inputTexture, channels: 3))
-                outputTensor = !string.IsNullOrEmpty(outputName) ? worker.Execute(t).PeekOutput(outputName) : worker.Execute(t).PeekOutput();
+            {
+                //outputTensor = !string.IsNullOrEmpty(outputName) ? worker.Execute(t).PeekOutput(outputName) : worker.Execute(t).PeekOutput();
+                yield return worker.ExecuteInTime(caller, t);
+                outputTensor = !string.IsNullOrEmpty(outputName) ? worker.PeekOutput(outputName) : worker.PeekOutput();
+            }
 
             yield return new WaitForCompletion(outputTensor);
         }
 
-        //// Executes the worker manually in slices of time
-        //public static IEnumerator ExecuteInTime(this IWorker worker, long timeThresholdTicks = 333333)  // 10 000 000 ticks per second
-        //{
-        //    var workerEnum = worker.StartManualSchedule();
-        //    long timePrev = System.DateTime.Now.Ticks;
+        // Executes the worker manually in slices of time
+        public static IEnumerator ExecuteInTime(this IWorker worker, BasePredictor caller,
+            Tensor t, long timeThresholdTicks = 200000)  // 1/50 secs (10 000 000 ticks per second)
+        {
+            var workerEnum = worker.StartManualSchedule(t);
+            long timePrev = System.DateTime.Now.Ticks;
 
-        //    while (workerEnum.MoveNext())
-        //    {
-        //        long timeNow = System.DateTime.Now.Ticks;
+            while (workerEnum.MoveNext())
+            {
+                long timeNow = System.DateTime.Now.Ticks;
 
-        //        if((timeNow - timePrev) >= timeThresholdTicks)
-        //        {
-        //            timePrev = timeNow;
-        //            yield return null;
-        //        }
-        //    }
-        //}
+                if ((timeNow - timePrev) >= timeThresholdTicks)
+                {
+                    Debug.Log(string.Format("  breaking execution of {0} after {1} ticks", caller.GetType().Name, timeNow - timePrev));
+                    yield return null;
+
+                    timePrev = System.DateTime.Now.Ticks;
+                }
+            }
+        }
 
         // Gets an output tensor from the worker and returns it as a temporary render texture.
         // The caller must release it using RenderTexture.ReleaseTemporary.
@@ -381,6 +394,10 @@ namespace com.quanterall.arplayground
             using (var tensor = output.Reshape(shape))
                 tensor.ToRenderTexture(rt);
         }
+
+        // Peeks the compute buffer of a worker's output tensor.
+        public static ComputeBuffer PeekOutputBuffer(this IWorker worker, string tensorName)
+          => ((ComputeTensorData)worker.PeekOutput(tensorName).data).buffer;
     }
 
 

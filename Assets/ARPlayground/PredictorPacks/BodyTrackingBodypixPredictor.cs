@@ -389,7 +389,7 @@ namespace com.quanterall.arplayground
             //// wait for completion
             //yield return new WaitForCompletion(_worker.PeekOutput("heatmaps"));
 
-            yield return _worker.ExecuteAndWaitForResult(_preprocessBuf, _inputWidth, _inputHeight, "segments");
+            yield return _worker.ExecuteAndWaitForResult(this, _preprocessBuf, _inputWidth, _inputHeight, "segments");
             //Debug.Log("  worker execution finished at: " + System.DateTime.Now.ToString("o"));
 
             // get results in coroutine

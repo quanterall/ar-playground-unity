@@ -370,7 +370,7 @@ namespace com.quanterall.arplayground
 
             //yield return new WaitForCompletion(_heatmapTensor);  // null;
 
-            yield return _worker.ExecuteAndWaitForResult(_texture, _predictionLayer);
+            yield return _worker.ExecuteAndWaitForResult(this, _texture, _predictionLayer);
             //Debug.Log("  worker execution finished at: " + System.DateTime.Now.ToString("o"));
 
             // get the model output

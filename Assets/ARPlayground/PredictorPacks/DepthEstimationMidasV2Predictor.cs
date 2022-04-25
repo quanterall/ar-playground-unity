@@ -343,7 +343,7 @@ namespace com.quanterall.arplayground
             //using (var t = new Tensor(inputShape, _buffers.preBuf))
             //    _worker.Execute(t);
 
-            yield return _worker.ExecuteAndWaitForResult(_texture);
+            yield return _worker.ExecuteAndWaitForResult(this, _texture);
 
             // NN output retrieval
             Tensor outputTensor = _worker.PeekOutput(_outputName).Reshape(new TensorShape(1, _inputHeight, _inputWidth, 1));

@@ -259,7 +259,7 @@ namespace com.quanterall.arplayground
             //using (var tensor = new Tensor(1, _size, _size, 3, _preBuffer))
             //    _worker.Execute(tensor);
 
-            yield return _worker.ExecuteAndWaitForResult(_preBuffer, _size, _size);
+            yield return _worker.ExecuteAndWaitForResult(this, _preBuffer, _size, _size);
 
             //// get results in coroutine
             //StartCoroutine(GetResultsRoutine());
