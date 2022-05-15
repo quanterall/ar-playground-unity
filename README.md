@@ -14,12 +14,13 @@ So far the asset contains the following predictors:
 * BodySegmentationSelfiePredictor - provides body segmentation using the Selfie model. For more information about the model, please look at [Selfie](https://google.github.io/mediapipe/solutions/selfie_segmentation.html).
 * ObjectDetectionYoloV4Predictor - provides object detection using the Yolo-v4 model. For more information about the model, please look at [Yolo-v4](https://arxiv.org/abs/2004.10934) and [yolov4-tiny-keras](https://github.com/bubbliiiing/yolov4-tiny-keras).
 * DepthEstimationMidasV2Predictor - provides monocular depth estimation using the MiDaS-v2 model. For more information about the model, please look at [MiDaS-v2](https://arxiv.org/abs/1907.01341v3) and [isl-org-MiDaS](https://github.com/isl-org/MiDaS).
+* HandTrackingBlazePredictor - provides lightweight hand detector using the MediaPipe BlazePalm model. For more information about the model, please look at [Real-Time Hand Tracking with MediaPipe](https://ai.googleblog.com/2019/08/on-device-real-time-hand-tracking-with.html) and [MediaPipe Handpose](https://github.com/tensorflow/tfjs-models/tree/master/handpose).
 
 We hope you'll enjoy the tool, and put it into good use.
 
 ## Documentation
 
-The online documentation is yet to come.
+The online documentation will come later.
 
 ## License
 
